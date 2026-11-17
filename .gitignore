@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+coverage/
+# Locally cached NHL logos (trademarked; fetched on-device, not redistributed)
+public/logos/nhl/
+logo-cache/
+*.tsbuildinfo

@@ -1,0 +1,9 @@
+# Optional: deploy from a computer with `npx wrangler deploy` (run inside the proxy/ folder).
+# Beginners can instead paste cloudflare-worker.js into the Cloudflare dashboard (see README).
+name = "nhl-proxy"
+main = "cloudflare-worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Restrict to your GitHub Pages origin if you like, e.g. "https://yourname.github.io"
+ALLOWED_ORIGIN = "*"
