@@ -41,16 +41,23 @@ app they load from the NHL's own servers.*
 
 ## Open it on your iPad
 
-### Option 1: GitHub Pages (no computer needed after setup)
+### Option 1: GitHub Pages (no computer needed)
 
-1. On github.com open this repository → **Settings → Pages**. Under *Build and
-   deployment → Source* choose **GitHub Actions**. You only do this once.
-2. Open the **Actions** tab. The workflow *Test, build & deploy to GitHub Pages*
-   runs on every push. If it ran before Pages was enabled, click it and choose
-   **Re-run all jobs**.
-3. When it is green, the site is at
-   **`https://timbosche-sudo.github.io/nhl-led-scoreboard/`**.
-4. In Safari tap **Share → Add to Home Screen** to get a full-screen app icon.
+**URL: <https://timbosche-sudo.github.io/nhl-led-scoreboard/>**
+
+The workflow `.github/workflows/deploy.yml` runs on every push to `main` (and to the
+current default branch). It type-checks, runs the tests, builds with the
+`/nhl-led-scoreboard/` base path, checks that every asset loads under that
+sub-path, and deploys `dist/` to Pages. You can also start it by hand from
+**Actions → Deploy to GitHub Pages → Run workflow**.
+
+One-time setup (already done): **Settings → Pages → Source: GitHub Actions**.
+
+To check a deployment, open the **Actions** tab. The newest *Deploy to GitHub
+Pages* run should have a green ✓ on both **build** and **deploy**, and the
+**deploy** box shows the site link.
+
+In Safari, tap **Share → Add to Home Screen** to get a full-screen app icon.
 
 Demo mode works straight away. Live data and logos also need the free proxy
 described below, because the NHL API blocks requests from other websites (CORS).
@@ -155,6 +162,8 @@ npm test             # unit, layout-bounds, API, demo, goal and proxy tests
 npm run typecheck
 npm run build        # production build to dist/
 npm run serve        # serve dist/ + NHL proxy on :8080 (Pi-style server)
+# Reproduce the GitHub Pages build locally, under the same sub-path:
+VITE_BASE=/nhl-led-scoreboard/ npm run build && BASE_PATH=/nhl-led-scoreboard/ npm run serve
 npm run render       # headless render of every layout to docs/frames/ (no browser)
 npm run fetch-logos  # cache official logos locally in public/logos/nhl/ (git-ignored)
 ```

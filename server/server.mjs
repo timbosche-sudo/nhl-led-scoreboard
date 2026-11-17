@@ -10,6 +10,7 @@
  *
  * Only GET/HEAD and a fixed set of upstream path prefixes are allowed, so this is not an open proxy.
  * Usage: npm run build && npm run serve      (PORT=8080 HOST=0.0.0.0 by default)
+ * Set BASE_PATH=/nhl-led-scoreboard/ to serve a GitHub-Pages-style build under that sub-path.
  */
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -19,6 +20,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist');
 const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? '0.0.0.0';
+// Optional sub-path, e.g. BASE_PATH=/nhl-led-scoreboard/ to mimic GitHub Pages hosting.
+const BASE_PATH = ('/' + (process.env.BASE_PATH ?? '/').replace(/^\/+|\/+$/g, '') + '/').replace('//', '/');
 
 const ROUTES = [
   { prefix: '/nhl-api/', upstream: 'https://api-web.nhle.com/', allow: /^v1\/(score|schedule|scoreboard|club-schedule|standings|gamecenter)\//, ttl: 15_000 },
@@ -87,7 +90,18 @@ const server = createServer(async (req, res) => {
     res.writeHead(405).end();
     return;
   }
-  const { pathname } = new URL(req.url ?? '/', 'http://localhost');
+  let { pathname } = new URL(req.url ?? '/', 'http://localhost');
+  if (BASE_PATH !== '/') {
+    if (pathname === BASE_PATH.slice(0, -1)) {
+      res.writeHead(301, { location: BASE_PATH }).end();
+      return;
+    }
+    if (!pathname.startsWith(BASE_PATH)) {
+      res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
+      return;
+    }
+    pathname = pathname.slice(BASE_PATH.length - 1);
+  }
   if (pathname === '/healthz') {
     res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true, uptime: process.uptime() }));
     return;
@@ -97,6 +111,6 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`NHL LED scoreboard: http://localhost:${PORT}  (on your network: http://<this-computer-ip>:${PORT})`);
+  console.log(`NHL LED scoreboard: http://localhost:${PORT}${BASE_PATH}  (on your network: http://<this-computer-ip>:${PORT}${BASE_PATH})`);
 });
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => server.close(() => process.exit(0)));

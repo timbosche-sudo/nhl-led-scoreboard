@@ -23,13 +23,13 @@ describe('NhlClient', () => {
     const calls: string[] = [];
     const fetchFn = vi.fn(async (url: string) => {
       calls.push(url);
-      if (url.startsWith('./nhl-api')) return new Response('<html>404</html>', { status: 404 });
+      if (url.startsWith('/nhl-api')) return new Response('<html>404</html>', { status: 404 });
       return json({ games: [] });
     }) as unknown as typeof fetch;
     const c = new NhlClient({ endpoints: buildEndpoints(''), fetchFn, sleep: noSleep, cacheTtlMs: 0 });
     const r = await c.getJson('/v1/score/2026-11-17');
     expect(r.endpoint.id).toBe('direct');
-    expect(calls).toEqual(['./nhl-api/v1/score/2026-11-17', 'https://api-web.nhle.com/v1/score/2026-11-17']);
+    expect(calls).toEqual(['/nhl-api/v1/score/2026-11-17', 'https://api-web.nhle.com/v1/score/2026-11-17']);
     await c.getJson('/v1/score/2026-11-18');
     expect(calls[2]).toBe('https://api-web.nhle.com/v1/score/2026-11-18');
   });

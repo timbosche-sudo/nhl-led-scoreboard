@@ -30,7 +30,11 @@ export function proxyEndpoint(proxyUrl: string): Endpoint {
   return { id: 'proxy', label: `Proxy (${base})`, api: `${base}/nhl-api`, assets: `${base}/nhl-assets` };
 }
 
-export const SAME_ORIGIN_ENDPOINT: Endpoint = { id: 'same-origin', label: 'Same-origin proxy (/nhl-api)', api: './nhl-api', assets: './nhl-assets' };
+/** Vite's base URL ("/" locally, "/nhl-led-scoreboard/" on GitHub Pages); "/" outside Vite (tests, Node). */
+const BASE_URL: string = (import.meta.env?.BASE_URL as string | undefined) ?? '/';
+const base = BASE_URL.endsWith('/') ? BASE_URL : BASE_URL + '/';
+
+export const SAME_ORIGIN_ENDPOINT: Endpoint = { id: 'same-origin', label: 'Same-origin proxy (/nhl-api)', api: `${base}nhl-api`, assets: `${base}nhl-assets` };
 
 export function buildEndpoints(proxyUrl: string | null | undefined): Endpoint[] {
   const list: Endpoint[] = [];

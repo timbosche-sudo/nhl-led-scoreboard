@@ -1,55 +1,93 @@
-name: Test, build & deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - main
+      # Current default branch of this repository (there is no main branch yet).
+      # Safe to remove once main exists and is the default branch.
+      - claude/nhl-led-scoreboard-5rdn6e
   pull_request:
   workflow_dispatch:
 
+# Pages deployments need to write to Pages and mint an OIDC token.
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# Never run two deployments at once; let an in-progress deployment finish.
 concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  test-and-build:
+  build:
     runs-on: ubuntu-latest
+    env:
+      # Project Pages sites live under https://<user>.github.io/<repo>/
+      VITE_BASE: /${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@v5
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Type check
         run: npm run typecheck
-      - name: Unit & layout tests
+
+      - name: Tests
         run: npm test
+
       - name: Production build
         run: npm run build
         env:
-          # Optional: set a repository variable NHL_PROXY_URL (Settings → Secrets and variables →
-          # Actions → Variables) to your Cloudflare Worker URL so live data works out of the box.
+          # Optional repository variable (Settings → Secrets and variables → Actions → Variables):
+          # your Cloudflare Worker URL, so live NHL data works without per-device setup.
           VITE_NHL_PROXY_URL: ${{ vars.NHL_PROXY_URL }}
-      - name: Smoke-test the production build with the Node server
+
+      - name: Prepare Pages output
         run: |
-          PORT=8080 node server/server.mjs &
+          # Any unknown URL under the site falls back to the app instead of a GitHub 404 page.
+          cp dist/index.html dist/404.html
+          # Serve files as-is (no Jekyll processing).
+          touch dist/.nojekyll
+
+      - name: Verify the build works under the repository sub-path
+        run: |
+          PORT=8080 BASE_PATH="$VITE_BASE" node server/server.mjs &
           sleep 1
-          curl -fsS http://localhost:8080/healthz
-          curl -fsS http://localhost:8080/ | grep -q '<div id="root">'
+          ROOT="http://localhost:8080$VITE_BASE"
+          curl -fsS "$ROOT" -o /tmp/index.html
+          grep -q '<div id="root">' /tmp/index.html
+          # every script, stylesheet and icon referenced by index.html must load from the sub-path
+          for ref in $(grep -oE '(src|href)="[^"]+"' /tmp/index.html | sed -E 's/^(src|href)="//; s/"$//'); do
+            case "$ref" in
+              "$VITE_BASE"*) echo "checking $ref"; curl -fsS -o /dev/null "http://localhost:8080$ref" ;;
+              http*|data:*) ;;
+              *) echo "::error::asset reference '$ref' is not under $VITE_BASE"; exit 1 ;;
+            esac
+          done
+          curl -fsS -o /dev/null "${ROOT}404.html"
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
   deploy:
-    needs: test-and-build
-    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+    needs: build
+    if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     environment:
       name: github-pages

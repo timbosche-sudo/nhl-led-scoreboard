@@ -123,7 +123,7 @@ export class BrowserLogoLoader {
     const variant = this.variant();
     const path = logoPath(abbrev, variant);
     const candidates: { url: string; label: string }[] = [
-      { url: `./logos/nhl/${abbrev}_${variant}.svg`, label: 'Local cache (fetched from assets.nhle.com)' },
+      { url: `${import.meta.env.BASE_URL}logos/nhl/${abbrev}_${variant}.svg`, label: 'Local cache (fetched from assets.nhle.com)' },
       ...this.endpoints().map((e) => ({ url: e.assets + path, label: `${e.label} → assets.nhle.com` })),
     ];
     this.cache.setState(abbrev, 'loading');
